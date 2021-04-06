@@ -53,7 +53,7 @@ namespace when_changed
             watcher.EnableRaisingEvents = true;
 
             // Wait for the user to quit the program.
-            Console.WriteLine("when_changed now watching: " + watcher.Path +"\\"+ watcher.Filter);
+            Console.WriteLine("when_changed now watching: " + watcher.Path + "\\" + watcher.Filter);
 
             Console.WriteLine("Ctrl-C to quit.");
 
@@ -100,7 +100,7 @@ namespace when_changed
         }
 
 
-        // Define the event handlers. 
+        // Define the event handlers.
         private static void OnChanged(object source, FileSystemEventArgs e)
         {
             // Specify what is done when a file is changed, created, or deleted.
@@ -118,7 +118,8 @@ namespace when_changed
         private static void runCmd(string changed_file)
         {
             // When a file is updated, we often get a flurry of updates in a single second.
-            lock (m_state_lock) {
+            lock (m_state_lock)
+            {
                 switch (m_state)
                 {
                     case State.Executing:
