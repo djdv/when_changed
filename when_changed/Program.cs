@@ -180,36 +180,13 @@ namespace when_changed
 
         private static void waitThenRun(string filechanged)
         {
-            Console.WriteLine("Running the command any second now...");
+            // TODO: original comment didn't explain
+            // What issues does this cause when removed? Some other semaphore|drop is probably better.
+            Thread.Sleep(100);
 
-
-            // Wait for things to calm down.
-            Thread.Sleep(1500);
-
-            var startinfo = new ProcessStartInfo();
-            startinfo.FileName = m_command;
-            startinfo.WindowStyle = ProcessWindowStyle.Minimized;
-
-            if (m_command_args.Length > 0)
-            {
-                String allargs = "";
-                foreach (var arg in m_command_args)
-                {
-                    if (arg == "%file%")
-                        allargs += filechanged + " ";
-                    else
-                        allargs += arg + " ";
-                }
-                // Trim the trailing space:
-                allargs.Substring(0, allargs.Length - 1);
-                Console.WriteLine(allargs);
-                startinfo.Arguments = allargs;
-            }
-
-
-            // copy over working directory like asif being run from same console.
-            startinfo.WorkingDirectory = Directory.GetCurrentDirectory();
-
+            // Substitute the lexical token in args, for its file target
+            var modifiedArgs = string.Join(" ", from arg in m_command_args
+                                                select arg == "%file%" ? filechanged : arg);
 
             // Start the execution.
             lock (m_state_lock)
@@ -218,16 +195,28 @@ namespace when_changed
                 m_state = State.Executing;
             }
 
-            var p = Process.Start(startinfo);
-            p.WaitForExit();
+            ProcessStartInfo startInfo = new ProcessStartInfo(m_command, modifiedArgs)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = Directory.GetCurrentDirectory(),
+            };
+            using (Process task = new Process())
+            {
+                task.StartInfo = startInfo;
+                // Don't print (additional) empty lines
+                task.OutputDataReceived += (sender, args) => { if (args.Data?.Length > 0) Console.WriteLine(args.Data); };
+                task.ErrorDataReceived += (sender, args) => { if (args.Data?.Length > 0) Console.Error.WriteLine(args.Data); };
 
-            Console.WriteLine("...cmd exited");
+                task.Start();
 
-            // Wait here for windows lag???
+                task.BeginOutputReadLine();
+                task.BeginErrorReadLine();
+                task.WaitForExit();
 
+                Console.WriteLine();
+            }
         }
-
-
-
     }
 }
